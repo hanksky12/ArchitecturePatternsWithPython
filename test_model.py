@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 import pytest
 
-from model import Batch, OrderLine
+from model import Batch, OrderLine, allocate, OutOfStock
 
 today = date.today()
 tomorrow = today + timedelta(days=1)
@@ -47,13 +47,41 @@ def test_allocation_is_idempotent():
     assert batch.available_quantity == 18
 
 
-def test_prefers_warehouse_batches_to_shipments():
-    pytest.fail("todo")
+def test_prefers_current_stock_batches_to_shipments():
+    in_stock_batch = Batch("in-stock-batch", "sku", 100, eta=None)
+    shipment_batch = Batch("shipment-batch", "sku", 100, eta=tomorrow)
+    line = OrderLine("order-123", "sku", 20)
+
+    allocate(line, [in_stock_batch, shipment_batch])
+    assert in_stock_batch.available_quantity == 80
+    assert shipment_batch.available_quantity == 100
 
 
 def test_prefers_earlier_batches():
-    pytest.fail("todo")
+    earliest = Batch("speedy-batch", "sku", 100, eta=today)
+    medium = Batch("normal-batch", "sku", 100, eta=tomorrow)
+    latest = Batch("slow-batch", "sku", 100, eta=later)
+    line = OrderLine("order-123", "sku", 20)
 
+    allocate(line, [medium, earliest, latest])
+    assert earliest.available_quantity == 80
+    assert medium.available_quantity == 100
+    assert latest.available_quantity == 100
+
+
+def test_returns_allocated_batch_ref():
+    in_stock_batch = Batch("in-stock-batch", "sku", 100, eta=None)
+    line = OrderLine("order-123", "sku", 20)
+    allocation = allocate(line, [in_stock_batch])
+    assert allocation == in_stock_batch.reference
+
+
+def test_raises_out_of_stock_exception_if_cannot_allocate():
+    batch = Batch("batch-001", "sku", 10, eta=today)
+    allocate(OrderLine("order-001", "sku", 10), [batch])
+
+    with pytest.raises(OutOfStock, match="sku"):
+        allocate(OrderLine("order-001", "sku", 10), [batch])
 
 
 def _make_batch_and_line(sku, batch_qty, line_qty):
