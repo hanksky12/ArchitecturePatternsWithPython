@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 
 
 @dataclass
@@ -41,8 +41,20 @@ class Batch:
             return False
         return other._ref == self._ref
 
+    def __gt__(self, other):
+        # 依據ETA排序
+        if self._eta is None:
+            return False
+        if other._eta is None:
+            return True
+        return self._eta > other._eta
+
     def __hash__(self):
         return hash(self._ref)
+
+    @property
+    def reference(self):
+        return self._ref
 
     @property
     def available_quantity(self):
@@ -53,3 +65,17 @@ class Batch:
     def allocated_quantity(self):
         # 已分配量 = 分配給OrderLine的數量總和
         return sum(line.qty for line in self._allocations)
+
+
+class OutOfStock(Exception):
+    pass
+
+
+def allocate(line: OrderLine, batches: List[Batch]) -> str:
+    try:
+        batch = [b for b in sorted(batches) if b.can_allocate(line)][0]
+        batch.allocate(line)
+        return batch.reference
+    except IndexError as e:
+        raise OutOfStock(f"Out of stock for sku {line.sku}")
+
