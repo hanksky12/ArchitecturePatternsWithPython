@@ -1,3 +1,12 @@
+# 此專案是歐萊禮出版的書[架構模式-使用python]內提供的練習專案，以下的原始專案fork過來
+## 我的練習的題目位於每個章節的exercise branch，例如第四章的練習位於chapter_04_service_layer_exercise
+
+在練習上，會採用自己比較看得懂的寫法來修改原始碼，但是會盡量保持原始碼的架構
+
+
+
+
+#######################################################################
 # Example application code for the python architecture book
 
 ## Chapters
